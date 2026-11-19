@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 
 import { DetectionOverlay } from '../components/DetectionOverlay';
-import { useObjectDetector } from '../detection';
+import { useObjectDetector, useSmoothedResult } from '../detection';
 
 /** Uygulama ön plandayken true döner (FR-7: arka plandan dönüşte kamera devam eder). */
 function useIsAppActive(): boolean {
@@ -22,8 +22,9 @@ export function CameraScreen() {
   const device = useCameraDevice('back');
   const appActive = useIsAppActive();
   // Motor/model `src/detection/index.ts` içinde seçilir; ekran hangisi olduğunu bilmez.
-  // GEÇİCİ: tanı şeridi açık (ilk cihaz denemeleri). Sorun çözülünce kapatılacak.
-  const detector = useObjectDetector({ diagnostics: true });
+  // Tanı şeridi yalnızca geliştirme (Debug) sürümünde görünür.
+  const detector = useObjectDetector({ diagnostics: __DEV__ });
+  const smoothed = useSmoothedResult(detector.result);
   const insets = useSafeAreaInsets();
   const [asked, setAsked] = useState(false);
 
@@ -64,7 +65,7 @@ export function CameraScreen() {
         isActive={appActive}
         outputs={detector.outputs}
       />
-      <DetectionOverlay result={detector.result} />
+      <DetectionOverlay result={smoothed} />
       {detector.diagnostics != null && (
         <View style={[styles.diagBox, { bottom: insets.bottom + 8 }]} pointerEvents="none">
           <Text style={styles.diagText}>{detector.diagnostics}</Text>

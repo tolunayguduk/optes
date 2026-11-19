@@ -8,7 +8,7 @@ interface Props {
   result: DetectionFrame | null;
 }
 
-const LABEL_HEIGHT = 18;
+const LABEL_HEIGHT = 24;
 
 /**
  * Kameranın üstüne kutu ve küçük etiket çizer. Dokunmaları engellemez.
@@ -45,7 +45,7 @@ export function DetectionOverlay({ result }: Props) {
                   { left: r.x, top: r.y, width: r.width, height: r.height, borderColor: color },
                 ]}
               />
-              <View style={[styles.label, { left: r.x, top: labelTop, backgroundColor: color }]}>
+              <View style={[styles.label, { left: r.x, top: labelTop, borderLeftColor: color }]}>
                 <Text style={styles.labelText} numberOfLines={1}>
                   {formatLabel(d.label, d.score)}
                 </Text>
@@ -58,13 +58,16 @@ export function DetectionOverlay({ result }: Props) {
 }
 
 const styles = StyleSheet.create({
-  box: { position: 'absolute', borderWidth: 2, borderRadius: 2 },
+  box: { position: 'absolute', borderWidth: 3, borderRadius: 3 },
   label: {
     position: 'absolute',
     height: LABEL_HEIGHT,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     justifyContent: 'center',
-    borderRadius: 2,
+    borderRadius: 3,
+    // Koyu zemin: yazı hangi renkli kutuda olursa olsun okunur (açık renklerde beyaz yazı okunmuyordu).
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    borderLeftWidth: 5,
   },
-  labelText: { color: '#fff', fontSize: 11, fontWeight: '600' },
+  labelText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 });

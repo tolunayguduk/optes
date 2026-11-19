@@ -14,3 +14,5 @@ export const useObjectDetector: UseObjectDetector = (options) =>
 
 export * from './types';
 export * from './geometry';
+export * from './tracker';
+export * from './useSmoothedResult';
