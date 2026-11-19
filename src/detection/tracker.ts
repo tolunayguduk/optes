@@ -1,6 +1,12 @@
+import { iou } from './boxMath';
+import { suppressOverlaps, type SuppressOptions } from './nms';
 import type { Detection, NormalizedRect } from './types';
 
+export { iou };
+
 export interface TrackerOptions {
+  /** Tekrarlayan/üst üste binen tespitleri eleme ayarları (hem gelen tespitlere hem gösterilenlere uygulanır). */
+  suppress?: SuppressOptions;
   /** Yeni ölçümün ağırlığı (0..1). Küçük değer = daha yumuşak ama daha gecikmeli. Varsayılan 0.35. */
   smoothing?: number;
   /** Bir tespitin mevcut bir nesneyle eşleşmesi için gereken en düşük IoU. Varsayılan 0.3. */
@@ -19,17 +25,6 @@ interface Track {
   votes: Record<string, number>;
   hits: number;
   lastSeen: number;
-}
-
-/** İki kutunun kesişim / birleşim oranı (0..1). */
-export function iou(a: NormalizedRect, b: NormalizedRect): number {
-  const x1 = Math.max(a.x, b.x);
-  const y1 = Math.max(a.y, b.y);
-  const x2 = Math.min(a.x + a.width, b.x + b.width);
-  const y2 = Math.min(a.y + a.height, b.y + b.height);
-  const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
-  const union = a.width * a.height + b.width * b.height - inter;
-  return union > 0 ? inter / union : 0;
 }
 
 function lerp(from: number, to: number, t: number): number {
@@ -65,9 +60,11 @@ export function createTracker(options: TrackerOptions = {}) {
   let tracks: Track[] = [];
 
   function visible(now: number): Detection[] {
-    return tracks
+    const shown = tracks
       .filter((t) => t.hits >= minHits && now - t.lastSeen <= holdMs)
       .map((t) => ({ label: bestLabel(t.votes), score: t.score, box: { ...t.box } }));
+    // Farklı izlerin (ör. eski bir kareden kalan parça kutusu) aynı nesne üzerinde üst üste binmesini önle.
+    return suppressOverlaps(shown, options.suppress);
   }
 
   function dropStale(now: number) {
@@ -76,7 +73,9 @@ export function createTracker(options: TrackerOptions = {}) {
 
   return {
     /** Yeni kare tespitlerini işler; o an gösterilecek (yumuşatılmış) tespitleri döner. */
-    update(detections: Detection[], now: number): Detection[] {
+    update(rawDetections: Detection[], now: number): Detection[] {
+      // Aynı karedeki tekrarlar yeni iz oluşturmasın.
+      const detections = suppressOverlaps(rawDetections, options.suppress);
       const pairs: { d: number; t: number; score: number }[] = [];
       detections.forEach((det, d) => {
         tracks.forEach((track, t) => {

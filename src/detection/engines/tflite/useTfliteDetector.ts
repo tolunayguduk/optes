@@ -25,7 +25,7 @@ function describeError(e: unknown): string {
 }
 
 const DEFAULT_SCORE_THRESHOLD = 0.5;
-const DEFAULT_MAX_RESULTS = 10;
+const DEFAULT_MAX_RESULTS = 20;
 
 /**
  * TFLite (react-native-fast-tflite) tabanlı tespit motoru.

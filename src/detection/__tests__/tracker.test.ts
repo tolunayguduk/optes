@@ -100,3 +100,24 @@ describe('createTracker', () => {
     expect(res.map((d) => d.label).sort()).toEqual(['book', 'cup']);
   });
 });
+
+describe('createTracker + tekrar eleme', () => {
+  it('aynı karedeki aynı nesnenin iki kutusundan yalnızca biri izlenir', () => {
+    const t = createTracker();
+    const frame = () => [det('bottle', 0.4, 0.2, 0.2, 0.5, 0.7), det('bottle', 0.41, 0.21, 0.2, 0.5, 0.6)];
+    t.update(frame(), 0);
+    expect(t.update(frame(), 33)).toHaveLength(1);
+  });
+
+  it('eski kareden kalan parça kutu, tam kutuyla örtüşünce gösterilmez', () => {
+    const t = createTracker({ holdMs: 350 });
+    // önce yalnızca parça kutu görülüyor (iki kare)
+    t.update([det('bottle', 0.4, 0.2, 0.2, 0.15, 0.6)], 0);
+    t.update([det('bottle', 0.4, 0.2, 0.2, 0.15, 0.6)], 33);
+    // sonra tam kutu geliyor; parça, tam kutunun içinde kalıyor
+    t.update([det('bottle', 0.4, 0.2, 0.2, 0.5, 0.8)], 66);
+    const shown = t.update([det('bottle', 0.4, 0.2, 0.2, 0.5, 0.8)], 99);
+    expect(shown).toHaveLength(1);
+    expect(shown[0]!.box.height).toBeGreaterThan(0.3);
+  });
+});
