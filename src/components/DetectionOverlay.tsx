@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { type LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
 
 import { type DetectionFrame, frameRectToViewRect } from '../detection';
+import { labelName } from '../i18n/labels.tr';
 import { colorForLabel, formatLabel } from './overlayUtils';
 
 interface Props {
@@ -47,7 +48,7 @@ export function DetectionOverlay({ result }: Props) {
               />
               <View style={[styles.label, { left: r.x, top: labelTop, borderLeftColor: color }]}>
                 <Text style={styles.labelText} numberOfLines={1}>
-                  {formatLabel(d.label, d.score)}
+                  {formatLabel(labelName(d.label), d.score)}
                 </Text>
               </View>
             </View>

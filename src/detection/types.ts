@@ -50,6 +50,8 @@ export interface ObjectDetector {
   outputs: CameraOutput[];
   /** En son tamamlanan tespit; henüz yoksa `null`. */
   result: DetectionFrame | null;
+  /** Bu motorun/modelin tanıyabildiği etiketler (seçim ekranı için). */
+  labels: readonly string[];
   /** `options.diagnostics` açıkken, motorun iç durumunu anlatan çok satırlı metin. */
   diagnostics?: string;
   /** `options.diagnostics` açıkken, modelin gördüğü görüntünün küçük bir data URI'si (BMP). */

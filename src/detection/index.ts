@@ -16,5 +16,6 @@ export const useObjectDetector: UseObjectDetector = (options) =>
 export * from './types';
 export * from './geometry';
 export * from './nms';
+export * from './filter';
 export * from './tracker';
 export * from './useSmoothedResult';

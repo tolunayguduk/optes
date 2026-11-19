@@ -1,5 +1,6 @@
 import type { TfliteDetectorModel } from '../engines/tflite/types';
 import { decodeEfficientDet } from './efficientDetDecode';
+import { EFFICIENTDET_LABELS } from './efficientDetLabels';
 
 /**
  * TensorFlow Hub / Kaggle "efficientdet/lite0-detection-metadata" (Apache 2.0, COCO 90 sınıf).
@@ -11,6 +12,7 @@ export const efficientDetLite0: TfliteDetectorModel = {
   id: 'efficientdet_lite0',
   source: require('../../../assets/models/efficientdet_lite0.tflite'),
   delegates: [],
+  labels: EFFICIENTDET_LABELS.filter((l) => l !== '???'),
   inputSize: { width: 320, height: 320 },
   decode: decodeEfficientDet,
 };

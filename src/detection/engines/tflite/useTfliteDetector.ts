@@ -241,5 +241,5 @@ export function useTfliteDetector(
   }
 
   // Çıktı her zaman verilir: durum değişince kamera oturumu yeniden yapılandırılmasın (titreme olmasın).
-  return { status, error, outputs: [frameOutput], result, diagnostics, diagnosticsImage };
+  return { status, error, outputs: [frameOutput], result, labels: model.labels, diagnostics, diagnosticsImage };
 }

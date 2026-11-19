@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@ant-design/react-native';
 import { AppState, Image, Linking, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 
 import { DetectionOverlay } from '../components/DetectionOverlay';
-import { useObjectDetector, useSmoothedResult } from '../detection';
+import { ObjectPicker } from '../components/ObjectPicker';
+import { filterByLabels, useObjectDetector, useSmoothedResult } from '../detection';
 
 /** Uygulama ön plandayken true döner (FR-7: arka plandan dönüşte kamera devam eder). */
 function useIsAppActive(): boolean {
@@ -24,7 +25,10 @@ export function CameraScreen() {
   // Motor/model `src/detection/index.ts` içinde seçilir; ekran hangisi olduğunu bilmez.
   // Tanı şeridi yalnızca geliştirme (Debug) sürümünde görünür.
   const detector = useObjectDetector({ diagnostics: __DEV__ });
-  const smoothed = useSmoothedResult(detector.result);
+  // Kullanıcının seçtiği nesneler (null = hepsi). Filtre, takip/eleme öncesinde uygulanır.
+  const [selected, setSelected] = useState<string[] | null>(null);
+  const filtered = useMemo(() => filterByLabels(detector.result, selected), [detector.result, selected]);
+  const smoothed = useSmoothedResult(filtered, undefined, selected?.join(',') ?? '*');
   const insets = useSafeAreaInsets();
   const [asked, setAsked] = useState(false);
 
@@ -66,6 +70,7 @@ export function CameraScreen() {
         outputs={detector.outputs}
       />
       <DetectionOverlay result={smoothed} />
+      <ObjectPicker labels={detector.labels} selected={selected} onChange={setSelected} />
       {detector.diagnostics != null && (
         <View style={[styles.diagBox, { bottom: insets.bottom + 8 }]} pointerEvents="none">
           {detector.diagnosticsImage != null && (

@@ -26,6 +26,8 @@ export interface TfliteDetectorModel {
   /** `require('...tflite')` veya `{ url }`. */
   source: ModelSource;
   delegates: TensorflowModelDelegate[];
+  /** Modelin tanıdığı etiketler ("???" gibi boş sınıflar hariç). */
+  labels: readonly string[];
   /** Modelin beklediği girdi boyutu (piksel). Girdi her zaman RGB, kare başına 3 bayt (uint8), HWC. */
   inputSize: Size;
   /**

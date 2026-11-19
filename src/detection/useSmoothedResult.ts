@@ -12,8 +12,11 @@ const PRUNE_INTERVAL_MS = 120;
 export function useSmoothedResult(
   result: DetectionFrame | null,
   options?: TrackerOptions,
+  /** Değişince izleyici sıfırlanır (ör. nesne seçimi değişti; eski seçimin kutuları kalmasın). */
+  resetKey: string = '',
 ): DetectionFrame | null {
-  const tracker = useMemo(() => createTracker(options), []); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const tracker = useMemo(() => createTracker(options), [resetKey]);
   const [smoothed, setSmoothed] = useState<DetectionFrame | null>(null);
   const frameSize = useRef<{ w: number; h: number } | null>(null);
 

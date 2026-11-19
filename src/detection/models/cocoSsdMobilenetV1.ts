@@ -1,4 +1,5 @@
 import type { TfliteDetectorModel } from '../engines/tflite/types';
+import { COCO_LABELS } from './cocoLabels';
 import { decodeCocoSsd } from './cocoSsdDecode';
 
 /**
@@ -14,6 +15,7 @@ export const cocoSsdMobilenetV1: TfliteDetectorModel = {
   id: 'coco_ssd_mobilenet_v1_quant',
   source: require('../../../assets/models/coco_ssd_mobilenet_v1_quant.tflite'),
   delegates: [],
+  labels: COCO_LABELS.filter((l) => l !== '???'),
   inputSize: { width: INPUT, height: INPUT },
   decode: decodeCocoSsd,
 };
