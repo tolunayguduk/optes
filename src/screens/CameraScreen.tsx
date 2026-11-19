@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@ant-design/react-native';
-import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
+import { AppState, Image, Linking, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Camera,
@@ -79,6 +79,9 @@ export function CameraScreen() {
       <DetectionOverlay result={smoothed} toView={toView} />
       {detector.diagnostics != null && (
         <View style={[styles.diagBox, { bottom: insets.bottom + 8 }]} pointerEvents="none">
+          {detector.diagnosticsImage != null && (
+            <Image source={{ uri: detector.diagnosticsImage }} style={styles.diagImage} />
+          )}
           <Text style={styles.diagText}>{detector.diagnostics}</Text>
         </View>
       )}
@@ -112,6 +115,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
+  diagImage: { width: 120, height: 120, marginBottom: 6, borderWidth: 1, borderColor: '#a0ff9c' },
   diagText: { color: '#a0ff9c', fontSize: 10, fontFamily: 'Menlo' },
   errorText: { color: '#fff', fontSize: 12 },
   body: { color: '#d9d9d9', fontSize: 14, textAlign: 'center', marginBottom: 16 },

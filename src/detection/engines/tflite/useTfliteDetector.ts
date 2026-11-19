@@ -4,6 +4,7 @@ import { useFrameOutput } from 'react-native-vision-camera';
 import { useResizer } from 'react-native-vision-camera-resizer';
 import { createSynchronizable, scheduleOnRN } from 'react-native-worklets';
 
+import { rgbToBmpDataUri } from '../../debugImage';
 import { clamp01, modelRectToFrameRect, uprightSize } from '../../geometry';
 import type {
   Detection,
@@ -71,6 +72,7 @@ export function useTfliteDetector(
       seen: createSynchronizable(''), // worklet'in gördüğü model/resizer durumu
       lastError: createSynchronizable(''), // son hata: "adım: mesaj"
       meta: createSynchronizable(''), // son karenin boyut/yön bilgisi ve kare->kamera noktaları
+      best: createSynchronizable(''), // en yüksek skorlu ham tespit (model uzayı)
     }),
     [],
   );
@@ -85,6 +87,8 @@ export function useTfliteDetector(
     setRuntimeError(null);
   }, []);
   const reportError = useCallback((message: string) => setRuntimeError(message), []);
+  const [diagnosticsImage, setDiagnosticsImage] = useState<string | undefined>(undefined);
+  const publishThumb = useCallback((uri: string) => setDiagnosticsImage(uri), []);
 
   const frameOutput = useFrameOutput({
     pixelFormat: 'yuv',
@@ -120,12 +124,27 @@ export function useTfliteDetector(
           resized.dispose();
         }
 
+        if (diagnosticsEnabled && diag.frames.getBlocking() % 20 === 0) {
+          stage = 'thumb';
+          // Modelin GÖRDÜĞÜ görüntü (yön, siyah bantlar, ters/yan dönme buradan anlaşılır).
+          scheduleOnRN(
+            publishThumb,
+            rgbToBmpDataUri(new Uint8Array(input), model.inputSize.width, model.inputSize.height, 60, 60),
+          );
+        }
+
         stage = 'inference';
         const outputs = loaded.runSync([input]);
 
         stage = 'decode';
         const best = model.decode(outputs, { scoreThreshold: 0, maxResults: 1 })[0];
         diag.topScore.setBlocking(best != null ? best.score : -1);
+        if (best != null) {
+          diag.best.setBlocking(
+            `best ${best.label} model-space x=${best.box.x.toFixed(2)} y=${best.box.y.toFixed(2)} ` +
+              `w=${best.box.width.toFixed(2)} h=${best.box.height.toFixed(2)}`,
+          );
+        }
         const detections: Detection[] = model
           .decode(outputs, { scoreThreshold, maxResults })
           .map((d) => {
@@ -208,6 +227,7 @@ export function useTfliteDetector(
           `done=${diag.done.getBlocking()} jsReceived=${jsReceived.current}`,
           `detections=${diag.lastCount.getBlocking()} topScore=${diag.topScore.getBlocking().toFixed(2)}`,
           diag.meta.getBlocking(),
+          diag.best.getBlocking(),
           modelInfo,
           lastError ? `ERR ${lastError}` : '',
         ]
@@ -234,5 +254,5 @@ export function useTfliteDetector(
   }
 
   // Çıktı her zaman verilir: durum değişince kamera oturumu yeniden yapılandırılmasın (titreme olmasın).
-  return { status, error, outputs: [frameOutput], result, diagnostics };
+  return { status, error, outputs: [frameOutput], result, diagnostics, diagnosticsImage };
 }

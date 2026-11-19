@@ -71,6 +71,8 @@ export interface ObjectDetector {
   result: DetectionFrame | null;
   /** `options.diagnostics` açıkken, motorun iç durumunu anlatan çok satırlı metin. */
   diagnostics?: string;
+  /** `options.diagnostics` açıkken, modelin gördüğü görüntünün küçük bir data URI'si (BMP). */
+  diagnosticsImage?: string;
 }
 
 /** Bir tespit motorunu React'e bağlayan hook sözleşmesi. */
