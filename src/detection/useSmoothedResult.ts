@@ -15,18 +15,15 @@ export function useSmoothedResult(
 ): DetectionFrame | null {
   const tracker = useMemo(() => createTracker(options), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [smoothed, setSmoothed] = useState<DetectionFrame | null>(null);
-  const frameSize = useRef<{ w: number; h: number; f2c: DetectionFrame['frameToCamera'] } | null>(
-    null,
-  );
+  const frameSize = useRef<{ w: number; h: number } | null>(null);
 
   useEffect(() => {
     if (result == null) return;
-    frameSize.current = { w: result.frameWidth, h: result.frameHeight, f2c: result.frameToCamera };
+    frameSize.current = { w: result.frameWidth, h: result.frameHeight };
     setSmoothed({
       detections: tracker.update(result.detections, Date.now()),
       frameWidth: result.frameWidth,
       frameHeight: result.frameHeight,
-      frameToCamera: result.frameToCamera,
     });
   }, [result, tracker]);
 
@@ -38,7 +35,7 @@ export function useSmoothedResult(
       const next = tracker.prune(Date.now());
       setSmoothed((prev) => {
         if (prev == null || sameSet(prev.detections, next)) return prev;
-        return { detections: next, frameWidth: size.w, frameHeight: size.h, frameToCamera: size.f2c };
+        return { detections: next, frameWidth: size.w, frameHeight: size.h };
       });
     }, PRUNE_INTERVAL_MS);
     return () => clearInterval(id);

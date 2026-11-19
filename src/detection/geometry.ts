@@ -1,4 +1,4 @@
-import type { FrameToCamera, NormalizedRect, PointXY } from './types';
+import type { NormalizedRect } from './types';
 
 export type FrameOrientation = 'up' | 'right' | 'down' | 'left';
 
@@ -60,31 +60,4 @@ export function frameRectToViewRect(rect: NormalizedRect, frame: Size, view: Siz
 export function clamp01(v: number): number {
   'worklet';
   return Math.min(1, Math.max(0, v));
-}
-
-/**
- * Dik karenin normalize kutusunu, kameranın kendi dönüşümleri üzerinden ekran (view) piksellerine çevirir:
- * kare -> kamera (`frameToCamera`) -> önizleme (`toView`, örn. `CameraRef.convertCameraPointToViewPoint`).
- * Dört köşe dönüştürülüp sınırlayıcı dikdörtgen alınır; böylece döndürme/aynalama da doğru işlenir.
- */
-export function frameRectToViewRectViaCamera(
-  rect: NormalizedRect,
-  frameToCamera: FrameToCamera,
-  toView: (cameraPoint: PointXY) => PointXY,
-): NormalizedRect {
-  const { origin, axisX, axisY } = frameToCamera;
-  const corners: [number, number][] = [
-    [rect.x, rect.y],
-    [rect.x + rect.width, rect.y],
-    [rect.x, rect.y + rect.height],
-    [rect.x + rect.width, rect.y + rect.height],
-  ];
-  const points = corners.map(([u, v]) =>
-    toView({ x: origin.x + u * axisX.x + v * axisY.x, y: origin.y + u * axisX.y + v * axisY.y }),
-  );
-  const xs = points.map((p) => p.x);
-  const ys = points.map((p) => p.y);
-  const x = Math.min(...xs);
-  const y = Math.min(...ys);
-  return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
 }

@@ -71,7 +71,7 @@ export function useTfliteDetector(
       topScore: createSynchronizable(-1), // son karedeki en yüksek ham skor (eşikten önce)
       seen: createSynchronizable(''), // worklet'in gördüğü model/resizer durumu
       lastError: createSynchronizable(''), // son hata: "adım: mesaj"
-      meta: createSynchronizable(''), // son karenin boyut/yön bilgisi ve kare->kamera noktaları
+      meta: createSynchronizable(''), // son karenin boyut ve yön bilgisi
       best: createSynchronizable(''), // en yüksek skorlu ham tespit (model uzayı)
     }),
     [],
@@ -161,20 +161,8 @@ export function useTfliteDetector(
           });
         diag.lastCount.setBlocking(detections.length);
 
-        // Kare -> kamera afin dönüşümü (3 nokta); ekrana oturtma kameranın kendi dönüşümüyle yapılır.
-        stage = 'mapping';
-        const c00 = frame.convertFramePointToCameraPoint({ x: 0, y: 0 });
-        const c10 = frame.convertFramePointToCameraPoint({ x: frame.width, y: 0 });
-        const c01 = frame.convertFramePointToCameraPoint({ x: 0, y: frame.height });
-        const frameToCamera = {
-          origin: { x: c00.x, y: c00.y },
-          axisX: { x: c10.x - c00.x, y: c10.y - c00.y },
-          axisY: { x: c01.x - c00.x, y: c01.y - c00.y },
-        };
         diag.meta.setBlocking(
-          `frame ${frame.width}x${frame.height} ${frame.orientation} mir=${frame.isMirrored ? 1 : 0} ` +
-            `cam0=${c00.x.toFixed(2)},${c00.y.toFixed(2)} axX=${frameToCamera.axisX.x.toFixed(2)},${frameToCamera.axisX.y.toFixed(2)} ` +
-            `axY=${frameToCamera.axisY.x.toFixed(2)},${frameToCamera.axisY.y.toFixed(2)}`,
+          `frame ${frame.width}x${frame.height} ${frame.orientation} mir=${frame.isMirrored ? 1 : 0}`,
         );
 
         stage = 'publish';
@@ -182,7 +170,6 @@ export function useTfliteDetector(
           detections,
           frameWidth: upright.width,
           frameHeight: upright.height,
-          frameToCamera,
         });
         diag.done.setBlocking(diag.done.getBlocking() + 1);
       } catch (e) {
