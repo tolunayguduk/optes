@@ -5,7 +5,7 @@ import { useResizer } from 'react-native-vision-camera-resizer';
 import { createSynchronizable, scheduleOnRN } from 'react-native-worklets';
 
 import { rgbToBmpDataUri } from '../../debugImage';
-import { clamp01, modelRectToFrameRect, uprightSize } from '../../geometry';
+import { clamp01, mirrorRect, modelRectToFrameRect, uprightSize } from '../../geometry';
 import type {
   Detection,
   DetectionFrame,
@@ -112,6 +112,8 @@ export function useTfliteDetector(
 
         stage = 'size';
         const upright = uprightSize(frame.width, frame.height, frame.orientation);
+        // Ön kamera: tampon aynalanmamış ama önizleme aynalıysa kutuları çevir.
+        const mirrored = frame.isMirrored;
 
         stage = 'resize';
         const resized = resizer.resize(frame);
@@ -153,10 +155,11 @@ export function useTfliteDetector(
             const y1 = clamp01(r.y);
             const x2 = clamp01(r.x + r.width);
             const y2 = clamp01(r.y + r.height);
+            const box = { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
             return {
               label: d.label,
               score: d.score,
-              box: { x: x1, y: y1, width: x2 - x1, height: y2 - y1 },
+              box: mirrored ? mirrorRect(box) : box,
             };
           });
         diag.lastCount.setBlocking(detections.length);

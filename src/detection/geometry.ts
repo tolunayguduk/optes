@@ -61,3 +61,12 @@ export function clamp01(v: number): number {
   'worklet';
   return Math.min(1, Math.max(0, v));
 }
+
+/**
+ * Kutuyu yatay eksende aynalar (x -> 1 - x - genişlik). Ön kamerada kare tamponu aynalanmamış ama
+ * önizleme aynalıysa (`Frame.isMirrored` true), kutuyu önizlemeye oturtmak için kullanılır.
+ */
+export function mirrorRect(rect: NormalizedRect): NormalizedRect {
+  'worklet';
+  return { x: 1 - rect.x - rect.width, y: rect.y, width: rect.width, height: rect.height };
+}

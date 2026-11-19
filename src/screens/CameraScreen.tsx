@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 
 import { DetectionOverlay } from '../components/DetectionOverlay';
+import { CameraFlipButton } from '../components/CameraFlipButton';
 import { FaceControls } from '../components/FaceControls';
 import { type Mode, ModeSwitch } from '../components/ModeSwitch';
 import { ObjectPicker } from '../components/ObjectPicker';
@@ -26,7 +27,9 @@ function useIsAppActive(): boolean {
 
 export function CameraScreen() {
   const { hasPermission, requestPermission } = useCameraPermission();
-  const device = useCameraDevice('back');
+  // Arka/ön kamera. Değişince izleyiciler sıfırlanır (aynalama/konum farkı eski kutuları geçersiz kılar).
+  const [position, setPosition] = useState<'back' | 'front'>('back');
+  const device = useCameraDevice(position);
   const appActive = useIsAppActive();
   const insets = useSafeAreaInsets();
   const [asked, setAsked] = useState(false);
@@ -39,13 +42,13 @@ export function CameraScreen() {
   // Kullanıcının seçtiği nesneler (null = hepsi). Filtre, takip/eleme öncesinde uygulanır.
   const [selected, setSelected] = useState<string[] | null>(null);
   const filtered = useMemo(() => filterByLabels(detector.result, selected), [detector.result, selected]);
-  const smoothed = useSmoothedResult(filtered, undefined, selected?.join(',') ?? '*');
+  const smoothed = useSmoothedResult(filtered, undefined, `${position}|${selected?.join(',') ?? '*'}`);
 
   // --- Yüz tanıma (DENEME): kayıtlı kişiler yalnızca bellekte tutulur ---
   const face = useFaceRecognizer({ diagnostics: __DEV__ });
   const [people, setPeople] = useState<Person[]>([]);
   const faceResult = useMemo(() => facesToDetectionFrame(face.frame, people), [face.frame, people]);
-  const faceSmoothed = useSmoothedResult(faceResult, undefined, `faces:${people.length}`);
+  const faceSmoothed = useSmoothedResult(faceResult, undefined, `${position}|faces:${people.length}`);
   const handleEnrolled = useCallback((person: Person) => {
     setPeople((prev) => {
       const existing = prev.find((p) => p.name.toLowerCase() === person.name.toLowerCase());
@@ -117,6 +120,12 @@ export function CameraScreen() {
       ) : (
         <ObjectPicker topOffset={44} labels={detector.labels} selected={selected} onChange={setSelected} />
       )}
+
+      <CameraFlipButton
+        topOffset={88}
+        position={position}
+        onPress={() => setPosition((p) => (p === 'back' ? 'front' : 'back'))}
+      />
 
       {active.diagnostics != null && (
         <View style={[styles.diagBox, { bottom: insets.bottom + 8 }]} pointerEvents="none">

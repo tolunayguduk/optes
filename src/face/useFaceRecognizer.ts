@@ -4,7 +4,7 @@ import { useFrameOutput } from 'react-native-vision-camera';
 import { type GPUFrame, useResizer } from 'react-native-vision-camera-resizer';
 import { createSynchronizable, scheduleOnRN } from 'react-native-worklets';
 
-import { clamp01, modelRectToFrameRect, uprightSize } from '../detection/geometry';
+import { clamp01, mirrorRect, modelRectToFrameRect, uprightSize } from '../detection/geometry';
 import { eyeAlignment, warpFaceToTensor } from './align';
 import { BLAZEFACE_ANCHOR_COUNT, BLAZEFACE_INPUT_SIZE, generateBlazeFaceAnchors } from './anchors';
 import { decodeBlazeFace } from './blazeFace';
@@ -67,6 +67,7 @@ export function useFaceRecognizer(options: FaceRecognizerOptions = {}): FaceReco
       lastMs: createSynchronizable(0),
       errors: createSynchronizable(0),
       lastError: createSynchronizable(''),
+      meta: createSynchronizable(''),
     }),
     [],
   );
@@ -108,6 +109,11 @@ export function useFaceRecognizer(options: FaceRecognizerOptions = {}): FaceReco
         diag.lastRun.setBlocking(now);
 
         const upright = uprightSize(frameIn.width, frameIn.height, frameIn.orientation);
+        // Ön kamera: tampon aynalanmamış ama önizleme aynalıysa kutuları çevir.
+        const mirrored = frameIn.isMirrored;
+        diag.meta.setBlocking(
+          `kare ${frameIn.width}x${frameIn.height} ${frameIn.orientation} mir=${mirrored ? 1 : 0}`,
+        );
 
         stage = 'resize';
         smallFrame = smallResizer.resize(frameIn);
@@ -156,8 +162,9 @@ export function useFaceRecognizer(options: FaceRecognizerOptions = {}): FaceReco
             const y1 = clamp01(r.y);
             const x2 = clamp01(r.x + r.width);
             const y2 = clamp01(r.y + r.height);
+            const faceBox = { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
             faces.push({
-              box: { x: x1, y: y1, width: x2 - x1, height: y2 - y1 },
+              box: mirrored ? mirrorRect(faceBox) : faceBox,
               detScore: b.score,
               embedding,
             });
@@ -214,6 +221,7 @@ export function useFaceRecognizer(options: FaceRecognizerOptions = {}): FaceReco
         [
           `yüz: blaze=${blazeState} embed=${embedState} resize=${smallState}/${bigState}`,
           `frames=${diag.frames.getBlocking()} notReady=${diag.notReady.getBlocking()} işlenen=${diag.processed.getBlocking()}`,
+          diag.meta.getBlocking(),
           `son: yüz=${diag.lastFaces.getBlocking()} süre=${diag.lastMs.getBlocking()}ms errors=${diag.errors.getBlocking()}`,
           lastError ? `ERR ${lastError}` : '',
         ]
