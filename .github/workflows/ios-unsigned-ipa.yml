@@ -36,6 +36,9 @@ jobs:
           cache: npm
       - run: npm ci
 
+      # Yüz parmak izi modeli repoda değil (lisans doğrulanmadı); derlemeden önce indirilir.
+      - run: npm run models:face
+
       # ios/ klasörü repoda yok (.gitignore); burada üretilir.
       - name: Native iOS projesini üret (prebuild)
         run: npx expo prebuild --platform ios --no-install

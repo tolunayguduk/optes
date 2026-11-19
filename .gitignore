@@ -52,3 +52,6 @@ yarn-error.*
 /android
 *.ipa
 .env
+
+# Lisansı/eğitim verisi doğrulanmamış model: repoya konmaz, `npm run models:face` ile indirilir
+assets/models/mobilefacenet.tflite

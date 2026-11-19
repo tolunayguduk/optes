@@ -19,6 +19,8 @@ interface Props {
   /** Seçili etiketler; null = hepsi. */
   selected: readonly string[] | null;
   onChange: (next: string[] | null) => void;
+  /** Üstteki diğer öğelerin (mod değiştirici) altında konumlamak için ek boşluk. */
+  topOffset?: number;
 }
 
 function summary(selected: readonly string[] | null): string {
@@ -28,7 +30,7 @@ function summary(selected: readonly string[] | null): string {
 }
 
 /** Kullanıcının hangi nesneleri görmek istediğini seçtiği düğme ve alt panel. */
-export function ObjectPicker({ labels, selected, onChange }: Props) {
+export function ObjectPicker({ labels, selected, onChange, topOffset = 0 }: Props) {
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -56,7 +58,7 @@ export function ObjectPicker({ labels, selected, onChange }: Props) {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Nesne seç"
-        style={[styles.trigger, { top: insets.top + 8 }]}
+        style={[styles.trigger, { top: insets.top + 8 + topOffset }]}
         onPress={() => setOpen(true)}
       >
         <Text style={styles.triggerText}>{summary(selected)}</Text>
