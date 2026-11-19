@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
-import { AppState, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Button } from '@ant-design/react-native';
+import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 
+import { DetectionOverlay } from '../components/DetectionOverlay';
 import { useObjectDetector } from '../detection';
 
 /** Uygulama ön plandayken true döner (FR-7: arka plandan dönüşte kamera devam eder). */
@@ -36,9 +38,9 @@ export function CameraScreen() {
         <Text style={styles.body}>
           Nesneleri tanıyabilmem için kameraya erişmem gerekiyor. Görüntüler cihazından çıkmaz.
         </Text>
-        <Pressable style={styles.button} onPress={() => Linking.openSettings()}>
-          <Text style={styles.buttonText}>Ayarlara git</Text>
-        </Pressable>
+        <Button type="primary" onPress={() => Linking.openSettings()}>
+          Ayarlara git
+        </Button>
       </View>
     );
   }
@@ -52,12 +54,15 @@ export function CameraScreen() {
   }
 
   return (
-    <Camera
-      style={StyleSheet.absoluteFill}
-      device={device}
-      isActive={appActive}
-      outputs={detector.outputs}
-    />
+    <>
+      <Camera
+        style={StyleSheet.absoluteFill}
+        device={device}
+        isActive={appActive}
+        outputs={detector.outputs}
+      />
+      <DetectionOverlay result={detector.result} />
+    </>
   );
 }
 
@@ -65,6 +70,4 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#000' },
   title: { color: '#fff', fontSize: 20, fontWeight: '600', marginBottom: 8 },
   body: { color: '#d9d9d9', fontSize: 14, textAlign: 'center', marginBottom: 16 },
-  button: { backgroundColor: '#1677ff', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 6 },
-  buttonText: { color: '#fff', fontSize: 14, fontWeight: '500' },
 });
