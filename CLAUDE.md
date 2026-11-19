@@ -24,10 +24,10 @@ Bu dosya Claude Code için proje bağlamını, kuralları ve konuşma notların�
 |---|---|
 | Framework | React Native + Expo (development build, prebuild), TypeScript |
 | UI kiti | `@ant-design/react-native` (Ant Design Mobile RN) |
-| Kamera | `react-native-vision-camera` v4 (frame processor) |
-| Nesne tespiti | On-device TFLite, COCO (80 sınıf) modeli, `react-native-fast-tflite` ile |
+| Kamera | `react-native-vision-camera` **v5** (Nitro tabanlı; `useFrameOutput`) |
+| Nesne tespiti | On-device TFLite, COCO (80 sınıf) modeli, `react-native-fast-tflite` v3 ile |
 | Kutu/etiket çizimi | `@shopify/react-native-skia` overlay (kamera üstünde) |
-| Frame işleme | `react-native-worklets-core` ile ayrı thread'de |
+| Frame işleme | `react-native-vision-camera-worklets` + `react-native-worklets` (ayrı worklet runtime), kare boyutlandırma: `react-native-vision-camera-resizer` |
 | Durum yönetimi | Minimal (React state/Zustand), ilk sürümde gerekirse |
 | Test | Jest + React Native Testing Library; iş mantığı (kutu koordinat dönüşümü, NMS) birim testli |
 | Derleme/CI | GitHub Actions: lint + test + imzasız iOS IPA derlemesi (macOS runner). EAS Build iOS cihaz derlemesi ücretli Apple hesabı ister, şimdilik kullanılmıyor |
@@ -105,4 +105,8 @@ optes/
 - Kullanıcı yedek bir Apple ID oluşturdu (kimlik bilgileri asla Claude'a verilmez, yalnızca Sideloadly'de girilir).
 - **Expo iskeleti kuruldu:** Expo SDK 58, React Native 0.88, React 19, TypeScript. `app.json`: ad/slug `optes`, bundleId `com.optes.app` (ücretsiz imzada Sideloadly gerekirse değiştirir), iPad desteği kapalı. `npx tsc --noEmit` ve `expo-doctor` (20/20) geçti.
 - **Önemli:** Expo SDK 58 benim bilgi tarihimden yeni. `AGENTS.md` kuralı: Expo/RN API'si yazmadan önce `https://docs.expo.dev/versions/v58.0.0/` ve `https://docs.expo.dev/llms.txt` okunur; paketler `npx expo install` ile kurulur. Vision Camera, fast-tflite, Skia ve Ant Design RN'nin SDK 58 / RN 0.88 uyumu kurulumdan önce doğrulanmalı.
+- **Uyum araştırması sonucu (2026-11-19):** Vision Camera artık v5 (v4 değil), `worklets-core` gerekmiyor. Kurulan paketler: vision-camera 5.2.4, nitro-modules, nitro-image, vision-camera-worklets, vision-camera-resizer, fast-tflite 3.0.1, worklets (Expo SDK 58 sürümü). `expo-doctor` tek uyarı: fast-tflite "New Architecture'da test edilmemiş" (dizin metadatası; paket Nitro tabanlı. **Gerçek cihazda doğrulanacak**). Skia ve Ant Design RN henüz kurulmadı (reanimated, gesture-handler, safe-area-context, icons gerektirir; Skia >=0.7 worklets + reanimated >=4 ister).
+- **Windows kısıtı:** `expo prebuild --platform ios` Windows'ta çalışmaz; iOS yapılandırması ancak CI'da (macOS) doğrulanır. Android prebuild yerelde config eklentilerini doğrulamak için kullanılabilir (çıktı `android/` silinir).
+- **Yapıldı:** `app.json` (kamera izin metni TR, fast-tflite eklentisi + CoreML delegate), `metro.config.js` (`.tflite` asset), `src/screens/CameraScreen.tsx` (tam ekran kamera, izin akışı + "Ayarlara git", arka plana alınınca kamera durur/döner), `App.tsx`.
+- **Sıradaki:** tespit modeli (COCO TFLite) edinme + frame output ile çıkarım, koordinat dönüşümü modülü (testli), Skia kutu/etiket overlay, Ant Design RN teması, GitHub Actions workflow'ları.
 - Oluşturulan dokümanlar: `docs/requirements.md`, `docs/adr/0001-teknoloji-secimi.md`.

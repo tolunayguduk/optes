@@ -17,7 +17,7 @@ Android ve iOS için tek kod tabanlı, canlı kamera üzerinde gerçek zamanlı 
 
 - React Native + Expo (development build) + TypeScript
 - `@ant-design/react-native` UI
-- `react-native-vision-camera` v4 kamera ve frame processor
+- `react-native-vision-camera` v5 (Nitro tabanlı) kamera ve `useFrameOutput`; `react-native-vision-camera-worklets`, `react-native-worklets` ve `react-native-vision-camera-resizer` ile kare işleme (güncelleme: ilk taslak v4 + worklets-core varsayıyordu, kurulumda v5 olduğu görüldü)
 - `react-native-fast-tflite` ile COCO eğitimli, 80 sınıflı TFLite nesne tespit modeli (hafif sürüm, ör. EfficientDet-Lite veya YOLO tabanlı; cihazda ölçülerek seçilecek)
 - `@shopify/react-native-skia` ile kutu ve etiket çizimi
 - Derleme: GitHub Actions macOS runner ile imzasız IPA; Sideloadly ile ücretsiz Apple ID imzası ve iPhone'a yükleme (güncelleme: Apple Developer hesabı yok, EAS iOS cihaz derlemesi ücretli hesap ister)
