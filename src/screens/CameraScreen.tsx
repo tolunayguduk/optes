@@ -22,7 +22,8 @@ export function CameraScreen() {
   const device = useCameraDevice('back');
   const appActive = useIsAppActive();
   // Motor/model `src/detection/index.ts` içinde seçilir; ekran hangisi olduğunu bilmez.
-  const detector = useObjectDetector();
+  // GEÇİCİ: tanı şeridi açık (ilk cihaz denemeleri). Sorun çözülünce kapatılacak.
+  const detector = useObjectDetector({ diagnostics: true });
   const insets = useSafeAreaInsets();
   const [asked, setAsked] = useState(false);
 
@@ -64,6 +65,11 @@ export function CameraScreen() {
         outputs={detector.outputs}
       />
       <DetectionOverlay result={detector.result} />
+      {detector.diagnostics != null && (
+        <View style={[styles.diagBox, { bottom: insets.bottom + 8 }]} pointerEvents="none">
+          <Text style={styles.diagText}>{detector.diagnostics}</Text>
+        </View>
+      )}
       {detector.status === 'error' && (
         <View style={[styles.errorBanner, { top: insets.top + 8 }]} pointerEvents="none">
           <Text style={styles.errorText} selectable>
@@ -86,6 +92,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: 'rgba(245, 34, 45, 0.9)',
   },
+  diagBox: {
+    position: 'absolute',
+    left: 8,
+    right: 8,
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  diagText: { color: '#a0ff9c', fontSize: 10, fontFamily: 'Menlo' },
   errorText: { color: '#fff', fontSize: 12 },
   body: { color: '#d9d9d9', fontSize: 14, textAlign: 'center', marginBottom: 16 },
 });

@@ -39,6 +39,8 @@ export interface ObjectDetectorOptions {
   scoreThreshold?: number;
   /** Kare başına en fazla bu kadar tespit döner. */
   maxResults?: number;
+  /** true ise motor, işlem hattı sayaçlarını `ObjectDetector.diagnostics` içinde metin olarak sunar (hata ayıklama). */
+  diagnostics?: boolean;
 }
 
 export interface ObjectDetector {
@@ -48,6 +50,8 @@ export interface ObjectDetector {
   outputs: CameraOutput[];
   /** En son tamamlanan tespit; henüz yoksa `null`. */
   result: DetectionFrame | null;
+  /** `options.diagnostics` açıkken, motorun iç durumunu anlatan çok satırlı metin. */
+  diagnostics?: string;
 }
 
 /** Bir tespit motorunu React'e bağlayan hook sözleşmesi. */

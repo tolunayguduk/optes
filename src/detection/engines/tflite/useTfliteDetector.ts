@@ -1,8 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTensorflowModel } from 'react-native-fast-tflite';
 import { useAsyncRunner, useFrameOutput } from 'react-native-vision-camera';
 import { useResizer } from 'react-native-vision-camera-resizer';
-import { scheduleOnRN } from 'react-native-worklets';
+import { createSynchronizable, scheduleOnRN } from 'react-native-worklets';
 
 import { clamp01, modelRectToFrameRect, uprightSize } from '../../geometry';
 import type {
@@ -55,11 +55,32 @@ export function useTfliteDetector(
 
   // scheduleOnRN, RN runtime'ında tanımlı bir fonksiyon ister.
   const publish = useCallback((next: DetectionFrame) => {
+    jsReceived.current += 1;
     setResult(next);
     setRuntimeError(null);
   }, []);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const reportError = useCallback((message: string) => setRuntimeError(message), []);
+
+  // --- Tanı (diagnostics) -------------------------------------------------------------
+  // `scheduleOnRN` köprüsünden BAĞIMSIZ: paylaşılan (Synchronizable) sayaçlar worklet
+  // thread'lerinde yazılır, JS tarafı periyodik okur. Köprü bozuksa bile ne olduğu görünür.
+  const diag = useMemo(
+    () => ({
+      frames: createSynchronizable(0), // onFrame çağrı sayısı
+      notReady: createSynchronizable(0), // model/resizer hazır görünmediği için atlanan kare
+      busy: createSynchronizable(0), // runner meşgul olduğu için atlanan kare
+      done: createSynchronizable(0), // adımları başarıyla biten kare
+      lastCount: createSynchronizable(0), // son karedeki tespit sayısı (eşikten sonra)
+      topScore: createSynchronizable(-1), // son karedeki en yüksek ham skor (eşikten önce)
+      seen: createSynchronizable(''), // worklet'in gördüğü model/resizer durumu
+      stage: createSynchronizable(''), // son hata: "adım: mesaj"
+    }),
+    [],
+  );
+  const jsReceived = useRef(0);
+  const [diagnostics, setDiagnostics] = useState<string | undefined>(undefined);
+  const diagnosticsEnabled = options.diagnostics === true;
 
   const frameOutput = useFrameOutput({
     pixelFormat: 'yuv',
@@ -67,9 +88,12 @@ export function useTfliteDetector(
     enablePhysicalBufferRotation: false,
     onFrame(frame) {
       'worklet';
+      diag.frames.setBlocking(diag.frames.getBlocking() + 1);
+      diag.seen.setBlocking(`${tflite.state}/${resizerState.state}`);
       const loaded = tflite.state === 'loaded' ? tflite.model : undefined;
       const resizer = resizerState.state === 'ready' ? resizerState.resizer : undefined;
       if (loaded == null || resizer == null) {
+        diag.notReady.setBlocking(diag.notReady.getBlocking() + 1);
         frame.dispose();
         return;
       }
@@ -94,6 +118,8 @@ export function useTfliteDetector(
           const outputs = loaded.runSync([input]);
 
           stage = 'decode';
+          const best = model.decode(outputs, { scoreThreshold: 0, maxResults: 1 })[0];
+          diag.topScore.setBlocking(best != null ? best.score : -1);
           const detections: Detection[] = model
             .decode(outputs, { scoreThreshold, maxResults })
             .map((d) => {
@@ -109,15 +135,19 @@ export function useTfliteDetector(
               };
             });
 
+          diag.lastCount.setBlocking(detections.length);
           stage = 'publish';
           scheduleOnRN(publish, {
             detections,
             frameWidth: upright.width,
             frameHeight: upright.height,
           });
+          diag.done.setBlocking(diag.done.getBlocking() + 1);
         } catch (e) {
+          const message = `${stage}: ${describeError(e)}`;
+          diag.stage.setBlocking(message);
           try {
-            scheduleOnRN(reportError, `${stage}: ${describeError(e)}`);
+            scheduleOnRN(reportError, message);
           } catch {
             // Bildirim de başarısız olursa en azından çökmeyelim.
           }
@@ -127,10 +157,39 @@ export function useTfliteDetector(
       });
       if (!handled) {
         // Çalıştırıcı meşgul: bu kareyi atla.
+        diag.busy.setBlocking(diag.busy.getBlocking() + 1);
         frame.dispose();
       }
     },
   });
+
+  const tfliteState = tflite.state;
+  const resizerStateName = resizerState.state;
+  const modelInfo =
+    tflite.state === 'loaded'
+      ? `in ${tflite.model.inputs.map((t) => `${t.dataType}[${t.shape.join(',')}]`).join(' ')} ` +
+        `out ${tflite.model.outputs.map((t) => `[${t.shape.join(',')}]`).join(' ')}`
+      : '';
+  useEffect(() => {
+    if (!diagnosticsEnabled) return;
+    const id = setInterval(() => {
+      const workletError = diag.stage.getBlocking();
+      setDiagnostics(
+        [
+          `js: model=${tfliteState} resizer=${resizerStateName}`,
+          `worklet sees: ${diag.seen.getBlocking() || '-'}`,
+          `frames=${diag.frames.getBlocking()} notReady=${diag.notReady.getBlocking()} busy=${diag.busy.getBlocking()}`,
+          `done=${diag.done.getBlocking()} jsReceived=${jsReceived.current}`,
+          `detections=${diag.lastCount.getBlocking()} topScore=${diag.topScore.getBlocking().toFixed(2)}`,
+          modelInfo,
+          workletError ? `ERR ${workletError}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      );
+    }, 500);
+    return () => clearInterval(id);
+  }, [diagnosticsEnabled, diag, tfliteState, resizerStateName, modelInfo]);
 
   let status: DetectorStatus = 'ready';
   let error: Error | undefined;
@@ -148,5 +207,5 @@ export function useTfliteDetector(
   }
 
   // Çıktı her zaman verilir: durum değişince kamera oturumu yeniden yapılandırılmasın (titreme olmasın).
-  return { status, error, outputs: [frameOutput], result };
+  return { status, error, outputs: [frameOutput], result, diagnostics };
 }
