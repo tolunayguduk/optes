@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@ant-design/react-native';
 import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import {
+  Camera,
+  type CameraRef,
+  useCameraDevice,
+  useCameraPermission,
+} from 'react-native-vision-camera';
 
 import { DetectionOverlay } from '../components/DetectionOverlay';
 import { useObjectDetector, useSmoothedResult } from '../detection';
@@ -26,6 +31,11 @@ export function CameraScreen() {
   const detector = useObjectDetector({ diagnostics: __DEV__ });
   const smoothed = useSmoothedResult(detector.result);
   const insets = useSafeAreaInsets();
+  const cameraRef = useRef<CameraRef>(null);
+  const toView = useCallback((p: { x: number; y: number }) => {
+    if (cameraRef.current == null) throw new Error('camera not ready');
+    return cameraRef.current.convertCameraPointToViewPoint(p);
+  }, []);
   const [asked, setAsked] = useState(false);
 
   useEffect(() => {
@@ -60,12 +70,13 @@ export function CameraScreen() {
   return (
     <>
       <Camera
+        ref={cameraRef}
         style={StyleSheet.absoluteFill}
         device={device}
         isActive={appActive}
         outputs={detector.outputs}
       />
-      <DetectionOverlay result={smoothed} />
+      <DetectionOverlay result={smoothed} toView={toView} />
       {detector.diagnostics != null && (
         <View style={[styles.diagBox, { bottom: insets.bottom + 8 }]} pointerEvents="none">
           <Text style={styles.diagText}>{detector.diagnostics}</Text>

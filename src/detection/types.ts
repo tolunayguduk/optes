@@ -24,12 +24,31 @@ export interface Detection {
   box: NormalizedRect;
 }
 
+/** Basit 2B nokta/vektör. */
+export interface PointXY {
+  x: number;
+  y: number;
+}
+
+/**
+ * Kare (frame) koordinatlarından kamera koordinatlarına afin dönüşüm: kare normalize (u, v) için
+ * kamera noktası = origin + u * axisX + v * axisY. Kameranın kendi dönüşümünden üç noktayla elde edilir;
+ * böylece döndürme, aynalama ve görüş alanı kırpması motor tarafından değil kamera tarafından çözülür.
+ */
+export interface FrameToCamera {
+  origin: PointXY;
+  axisX: PointXY;
+  axisY: PointXY;
+}
+
 /** Bir kareden çıkan tespitler ve o karenin dik boyutu (piksel). */
 export interface DetectionFrame {
   detections: Detection[];
   /** Dik (rotasyon uygulanmış) kare boyutu; kutuları ekrana oturtmak için gerekir. */
   frameWidth: number;
   frameHeight: number;
+  /** Varsa, kare -> kamera dönüşümü; overlay önizleme koordinatlarını buradan kamera üzerinden bulur. */
+  frameToCamera?: FrameToCamera;
 }
 
 export type DetectorStatus = 'loading' | 'ready' | 'error';
