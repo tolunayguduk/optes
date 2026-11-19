@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@ant-design/react-native';
 import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 
 import { DetectionOverlay } from '../components/DetectionOverlay';
@@ -22,6 +23,7 @@ export function CameraScreen() {
   const appActive = useIsAppActive();
   // Motor/model `src/detection/index.ts` içinde seçilir; ekran hangisi olduğunu bilmez.
   const detector = useObjectDetector();
+  const insets = useSafeAreaInsets();
   const [asked, setAsked] = useState(false);
 
   useEffect(() => {
@@ -62,6 +64,13 @@ export function CameraScreen() {
         outputs={detector.outputs}
       />
       <DetectionOverlay result={detector.result} />
+      {detector.status === 'error' && (
+        <View style={[styles.errorBanner, { top: insets.top + 8 }]} pointerEvents="none">
+          <Text style={styles.errorText} selectable>
+            Tespit hatası: {detector.error?.message ?? 'bilinmeyen hata'}
+          </Text>
+        </View>
+      )}
     </>
   );
 }
@@ -69,5 +78,14 @@ export function CameraScreen() {
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: '#000' },
   title: { color: '#fff', fontSize: 20, fontWeight: '600', marginBottom: 8 },
+  errorBanner: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(245, 34, 45, 0.9)',
+  },
+  errorText: { color: '#fff', fontSize: 12 },
   body: { color: '#d9d9d9', fontSize: 14, textAlign: 'center', marginBottom: 16 },
 });

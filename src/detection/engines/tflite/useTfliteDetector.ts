@@ -14,6 +14,15 @@ import type {
 } from '../../types';
 import type { TfliteDetectorModel } from './types';
 
+/** Worklet thread'inde de çalışabilen, hata nesnesinden okunabilir bir metin çıkarır. */
+function describeError(e: unknown): string {
+  'worklet';
+  if (e != null && typeof e === 'object' && 'message' in e) {
+    return String((e as { message: unknown }).message);
+  }
+  return String(e);
+}
+
 const DEFAULT_SCORE_THRESHOLD = 0.5;
 const DEFAULT_MAX_RESULTS = 10;
 
@@ -45,7 +54,12 @@ export function useTfliteDetector(
   const [result, setResult] = useState<DetectionFrame | null>(null);
 
   // scheduleOnRN, RN runtime'ında tanımlı bir fonksiyon ister.
-  const publish = useCallback((next: DetectionFrame) => setResult(next), []);
+  const publish = useCallback((next: DetectionFrame) => {
+    setResult(next);
+    setRuntimeError(null);
+  }, []);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const reportError = useCallback((message: string) => setRuntimeError(message), []);
 
   const frameOutput = useFrameOutput({
     pixelFormat: 'yuv',
@@ -63,17 +77,23 @@ export function useTfliteDetector(
       const upright = uprightSize(frame.width, frame.height, frame.orientation);
       const handled = asyncRunner.runAsync(() => {
         'worklet';
+        // Hangi adımda olduğumuzu izle: worklet thread'inde yakalanmamış bir hata uygulamayı
+        // çökertir (abort), bu yüzden hatayı yakalayıp adım adıyla birlikte arayüze bildiriyoruz.
+        let stage = 'resize';
         try {
           const resized = resizer.resize(frame);
           let input: ArrayBuffer;
           try {
+            stage = 'copy';
             // Resizer çıktısını dispose'dan ÖNCE kopyala; kopya tam boyutlu ve bağımsızdır.
             input = new Uint8Array(resized.getPixelBuffer()).slice().buffer;
           } finally {
             resized.dispose();
           }
+          stage = 'inference';
           const outputs = loaded.runSync([input]);
 
+          stage = 'decode';
           const detections: Detection[] = model
             .decode(outputs, { scoreThreshold, maxResults })
             .map((d) => {
@@ -89,11 +109,18 @@ export function useTfliteDetector(
               };
             });
 
+          stage = 'publish';
           scheduleOnRN(publish, {
             detections,
             frameWidth: upright.width,
             frameHeight: upright.height,
           });
+        } catch (e) {
+          try {
+            scheduleOnRN(reportError, `${stage}: ${describeError(e)}`);
+          } catch {
+            // Bildirim de başarısız olursa en azından çökmeyelim.
+          }
         } finally {
           frame.dispose();
         }
@@ -113,6 +140,9 @@ export function useTfliteDetector(
   } else if (resizerState.state === 'error') {
     status = 'error';
     error = resizerState.error;
+  } else if (runtimeError != null) {
+    status = 'error';
+    error = new Error(runtimeError);
   } else if (tflite.state === 'loading' || resizerState.state === 'loading') {
     status = 'loading';
   }
