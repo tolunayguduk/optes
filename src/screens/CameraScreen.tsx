@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { AppState, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 
+import { useObjectDetector } from '../detection';
+
 /** Uygulama ön plandayken true döner (FR-7: arka plandan dönüşte kamera devam eder). */
 function useIsAppActive(): boolean {
   const [active, setActive] = useState(AppState.currentState === 'active');
@@ -16,6 +18,8 @@ export function CameraScreen() {
   const { hasPermission, requestPermission } = useCameraPermission();
   const device = useCameraDevice('back');
   const appActive = useIsAppActive();
+  // Motor/model `src/detection/index.ts` içinde seçilir; ekran hangisi olduğunu bilmez.
+  const detector = useObjectDetector();
   const [asked, setAsked] = useState(false);
 
   useEffect(() => {
@@ -47,7 +51,14 @@ export function CameraScreen() {
     );
   }
 
-  return <Camera style={StyleSheet.absoluteFill} device={device} isActive={appActive} />;
+  return (
+    <Camera
+      style={StyleSheet.absoluteFill}
+      device={device}
+      isActive={appActive}
+      outputs={detector.outputs}
+    />
+  );
 }
 
 const styles = StyleSheet.create({
