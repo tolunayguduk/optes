@@ -2,9 +2,18 @@ name: iOS imzasız IPA
 
 # SADECE ELLE TETİKLENİR (macOS dakikaları pahalıdır; her push'ta çalışmaz).
 # Çıktı: imzasız .ipa (artifact). Windows'ta Sideloadly ile ücretsiz Apple ID'yle imzalanıp yüklenir.
+#  - Debug   : geliştirme istemcisi. JS kodu paketlenmez, Metro'dan (bilgisayardan) yüklenir.
+#              Bir kez yüklenir; JS değişiklikleri için yeniden derleme GEREKMEZ.
+#  - Release : JS paketli, tek başına çalışan sürüm.
 # Bkz. docs/build-ios.md
 on:
   workflow_dispatch:
+    inputs:
+      configuration:
+        description: "Derleme türü"
+        type: choice
+        options: [Debug, Release]
+        default: Release
 
 concurrency:
   group: ios-ipa
@@ -14,6 +23,11 @@ jobs:
   build:
     runs-on: macos-latest
     timeout-minutes: 60
+    env:
+      CONFIGURATION: ${{ inputs.configuration }}
+      # React Native'in önceden derlenmiş çekirdeğini kullan (varsa); yoksa otomatik olarak kaynaktan derler.
+      RCT_USE_PREBUILT_RNCORE: "1"
+      RCT_USE_RN_DEP: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,29 +37,48 @@ jobs:
       - run: npm ci
 
       # ios/ klasörü repoda yok (.gitignore); burada üretilir.
-      - name: Native iOS projesini üret (prebuild + pod install)
-        run: npx expo prebuild --platform ios --no-install && cd ios && pod install
+      - name: Native iOS projesini üret (prebuild)
+        run: npx expo prebuild --platform ios --no-install
 
-      - name: Derle (imzasız, Release, gerçek cihaz)
+      - name: CocoaPods önbelleği
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/CocoaPods
+          key: pods-${{ runner.os }}-${{ hashFiles('package-lock.json', 'app.json') }}
+          restore-keys: pods-${{ runner.os }}-
+
+      - name: Pod install
+        run: cd ios && pod install
+
+      - name: Derleme önbelleği
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: dd-${{ runner.os }}-${{ env.CONFIGURATION }}-${{ hashFiles('package-lock.json', 'app.json') }}
+          restore-keys: dd-${{ runner.os }}-${{ env.CONFIGURATION }}-
+
+      - name: Derle (imzasız, gerçek cihaz)
         run: |
           xcodebuild \
             -workspace ios/optes.xcworkspace \
             -scheme optes \
-            -configuration Release \
+            -configuration "$CONFIGURATION" \
             -sdk iphoneos \
             -destination 'generic/platform=iOS' \
             -derivedDataPath build \
+            ONLY_ACTIVE_ARCH=NO \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build
 
       - name: IPA paketle
         run: |
+          rm -rf Payload
           mkdir -p Payload
-          cp -R build/Build/Products/Release-iphoneos/optes.app Payload/
-          zip -qr optes-unsigned.ipa Payload
+          cp -R "build/Build/Products/${CONFIGURATION}-iphoneos/optes.app" Payload/
+          zip -qr "optes-${CONFIGURATION}-unsigned.ipa" Payload
 
       - uses: actions/upload-artifact@v4
         with:
-          name: optes-unsigned-ipa
-          path: optes-unsigned.ipa
+          name: optes-${{ env.CONFIGURATION }}-unsigned-ipa
+          path: optes-${{ env.CONFIGURATION }}-unsigned.ipa
           retention-days: 7

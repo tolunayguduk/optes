@@ -1,5 +1,20 @@
 # iOS derleme ve iPhone'a yükleme (ücretsiz Apple ID ile)
 
+## Hızlı geliştirme: Debug (geliştirme istemcisi) + Metro
+
+Her JS değişikliği için yeniden derlemek yavaştır. Bunun yerine **bir kez** Debug derlemesi yükleyip kodu bilgisayardan canlı yükleriz:
+
+1. Actions > **iOS imzasız IPA** > Run workflow > `configuration: Debug`. Çıkan `optes-Debug-unsigned.ipa`'yı aşağıdaki 2. bölümdeki gibi Sideloadly ile yükle (bir kez).
+2. Bilgisayarda `npm start` (= `expo start --dev-client`) çalıştır. iPhone ve bilgisayar **aynı Wi-Fi'da** olmalı.
+3. Windows Güvenlik Duvarı sorarsa Node.js için **özel ağlarda** izin ver (port 8081).
+4. iPhone'da uygulamayı aç. İlk açılışta "yerel ağ" iznini ver. Açılış ekranında **Enter URL manually** de ve terminalde yazan adresi gir (örn. `http://192.168.1.20:8081`).
+5. Bundan sonra JS/TS dosyasını kaydedince uygulama saniyeler içinde güncellenir. Hata mesajları ve `console.log` çıktıları terminalde görünür.
+
+Yeniden derleme gerekir: yeni native paket, `app.json` izin/eklenti değişikliği, 7 günlük imza süresinin dolması.
+
+Önbellek: workflow CocoaPods ve derleme çıktısını önbelleğe alır; ardışık derlemeler daha kısa sürmelidir (ölçülmedi).
+
+
 > Durum: **henüz hiç denenmedi.** İlk derlemede Xcode/CocoaPods hataları çıkabilir; hatayı birlikte gideririz.
 
 ## 1. IPA derleme (GitHub, macOS runner)

@@ -36,6 +36,7 @@
           "enableCoreMLDelegate": true
         }
       ]
-    ]
+    ],
+    "scheme": "optes"
   }
 }
